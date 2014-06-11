@@ -149,6 +149,10 @@ class MagentoExporter(MagentoBaseExporter):
         """
         return self.mapper.map_record(self.binding_record)
 
+
+    def _after_export(self):
+        return True
+
     def _validate_data(self, data):
         """ Check if the values to import are correct
 
@@ -206,6 +210,7 @@ class MagentoExporter(MagentoBaseExporter):
             if not record:
                 return _('Nothing to export.')
             self.magento_id = self._create(record)
+        self._after_export()
         return _('Record exported with ID %s on Magento.') % self.magento_id
 
 

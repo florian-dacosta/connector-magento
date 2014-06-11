@@ -78,7 +78,7 @@ class magento_res_partner(orm.Model):
     _inherits = {'res.partner': 'openerp_id'}
     _description = 'Magento Partner'
 
-    _rec_name = 'website_id'
+    _rec_name = 'name'
 
     def _get_mag_partner_from_website(self, cr, uid, ids, context=None):
         mag_partner_obj = self.pool['magento.res.partner']
@@ -568,6 +568,11 @@ class AddressAdapter(GenericAdapter):
                               [filters] if filters else [{}])]
 
 
+    def create(self, data):
+        """ Create a record on the external system """
+        partner_id = data.pop('partner_id')
+        return self._call('%s.create' % self._magento_model, [partner_id, data])
+
 @magento
 class AddressImport(MagentoImportSynchronizer):
     _model_name = ['magento.address']
@@ -623,6 +628,7 @@ class AddressImportMapper(BaseAddressImportMapper):
         ('is_default_shipping', 'is_default_shipping'),
         ('company', 'company'),
     ]
+
 
     @mapping
     def names(self, record):
