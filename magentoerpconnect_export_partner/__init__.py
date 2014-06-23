@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import connector
-import consumer
-import partner
+from . import connector
+from . import consumer
+from . import partner

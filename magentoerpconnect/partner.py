@@ -54,6 +54,7 @@ class res_partner(orm.Model):
             string="Magento Address Bindings"),
         'birthday': fields.date('Birthday'),
         'company': fields.char('Company'),
+        'magento_password': fields.char('Magento Password'),
     }
 
     def copy_data(self, cr, uid, id, default=None, context=None):
@@ -199,6 +200,8 @@ class magento_address(orm.Model):
     _sql_constraints = [
         ('magento_uniq', 'unique(backend_id, magento_id)',
          'A partner address with same ID on Magento already exists.'),
+        ('openerp_uniq', 'unique(backend_id, openerp_id)',
+         'A partner address can only have one binding by backend.'),
     ]
 
 

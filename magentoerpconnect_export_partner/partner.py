@@ -45,7 +45,6 @@ class PartnerExport(MagentoExporter):
     _model_name = ['magento.res.partner']
 
     def _after_export(self):
-        address_ids = []
         data = {
             'magento_partner_id': self.binding_id,
         }
@@ -53,15 +52,13 @@ class PartnerExport(MagentoExporter):
             data['openerp_id'] = self.binding_record.openerp_id.id
             data['is_default_billing'] = True
             data['is_default_shipping'] = True
-            address_ids.append(self.session.create('magento.address', data))
+            self.session.create('magento.address', data)
         for child in self.binding_record.child_ids:
             if not child.magento_address_bind_ids:
                 data['is_default_billing'] = False
                 data['is_default_shipping'] = False
                 data['openerp_id'] = child.id
-                address_ids.append(self.session.create('magento.address', data))
-        return True
-
+                self.session.create('magento.address', data)
 
     def _validate_data(self, data):
         """ Check if the values to import are correct
@@ -71,10 +68,9 @@ class PartnerExport(MagentoExporter):
 
         Raise `InvalidDataError`
         """
-        if not data.get('email', False):
-            raise InvalidDataError("The partner does not have email "
-                                   "but it is mandatory for magento")
-        return
+        if not data.get('email'):
+            raise InvalidDataError("The partner does not have an email "
+                                   "but it is mandatory for Magento")
 
 
 @magento
@@ -82,6 +78,12 @@ class AddressExport(MagentoExporter):
     _model_name = ['magento.address']
 
 
+    def _export_dependencies(self):
+        """ Export the dependencies for the record"""
+        relation = self.binding_record.parent_id or self.binding_record.openerp_id
+        self._export_dependency(relation, 'magento.res.partner',
+                                PartnerExport)
+
     def _validate_data(self, data):
         """ Check if the values to import are correct
 
@@ -90,12 +92,14 @@ class AddressExport(MagentoExporter):
 
         Raise `InvalidDataError`
         """
+        missing_fields = []
         for required_key in ('city', 'street', 'postcode', 'country_id', 'telephone'):
-            if not data.get(required_key, False):
-                raise InvalidDataError("The address does not contain %s "
-                                       "but it is mandatory for magento" %
-                                       required_key)
-        return
+            if not data.get(required_key):
+                missing_fields.append(required_key)
+        if missing_fields:
+            raise InvalidDataError("The address does not contain one or several "
+                                   "mandatory fields for Magento : %s" %
+                                   missing_fields)
 
 
 @magento
@@ -103,19 +107,23 @@ class PartnerExportMapper(ExportMapper):
     _model_name = 'magento.res.partner'
 
     direct = [
-            ('email', 'email'),
             ('birthday', 'dob'),
             ('created_at', 'created_at'),
             ('updated_at', 'updated_at'),
             ('taxvat', 'taxvat'),
             ('group_id', 'group_id'),
             ('website_id', 'website_id'),
+            ('magento_password', 'password_hash'),
         ]
+
+    @mapping
+    def email(self, record):
+        email = record.emailid or record.email
+        return {'email': email}
 
     @changed_by('name')
     @mapping
     def names(self, record):
-        # FIXME base_surname needed
         if ' ' in record.name:
             parts = record.name.split()
             firstname = parts[0]
@@ -139,12 +147,13 @@ class PartnerAddressExportMapper(ExportMapper):
  
     @mapping
     def partner(self, record):
-        return {'partner_id': int(record.magento_partner_id.magento_id)}
+        binder = self.get_binder_for_model('magento.res.partner')
+        erp_partner_id = record.parent_id and record.parent_id.id or record.openerp_id.id
+        mag_partner_id = binder.to_backend(erp_partner_id, True)
+        return {'partner_id': mag_partner_id}
  
-
     @mapping
     def names(self, record):
-        # FIXME base_surname needed
         if ' ' in record.name:
             parts = record.name.split()
             firstname = parts[0]
@@ -154,27 +163,26 @@ class PartnerAddressExportMapper(ExportMapper):
             firstname = '-'
         return {'firstname': firstname, 'lastname': lastname}
  
-
     @mapping
     def phone(self, record):
         return {'telephone': record.phone or record.mobile}
 
- 
     @mapping
     def country(self, record):
         if record.country_id:
             return {'country_id': record.country_id.code}
- 
  
     @mapping
     def region(self, record):
         if record.state_id:
             return {'region': record.state_id.name}
  
- 
     @mapping
     def street(self, record):
         if record.street:
-            street = [record.street]
+            street = record.street
+        if record.street2:
+            street = ['\n'.join([street, record.street2])]
+        if street:
             return {'street': street}
 

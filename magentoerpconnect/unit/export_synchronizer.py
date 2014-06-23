@@ -128,6 +128,7 @@ class MagentoBaseExporter(ExportSynchronizer):
         # The commit will also release the lock acquired on the binding
         # record
         self.session.commit()
+        self._after_export()
         return result
 
     def _run(self):
@@ -256,7 +257,6 @@ class MagentoExporter(MagentoBaseExporter):
         # 'product.product' record but the binding model is
         # 'magento.product.product'
         wrap = relation._model._name != binding_model
-
         if wrap and hasattr(relation, binding_field):
             domain = [('openerp_id', '=', relation.id),
                       ('backend_id', '=', self.backend_record.id)]
@@ -294,7 +294,6 @@ class MagentoExporter(MagentoBaseExporter):
             # "direct" binding (the binding record is the same record).
             # If wrap is True, relation is already a binding record.
             binding_id = relation.id
-
         if rel_binder.to_backend(binding_id) is None:
             exporter = self.get_connector_unit_for_model(exporter_class,
                                                          binding_model)
@@ -313,7 +312,8 @@ class MagentoExporter(MagentoBaseExporter):
 
 
     def _after_export(self):
-        return True
+        """ Can do several actions after exporting a record on magento """
+        pass
 
     def _validate_data(self, data):
         """ Check if the values to import are correct
@@ -376,7 +376,6 @@ class MagentoExporter(MagentoBaseExporter):
             if not record:
                 return _('Nothing to export.')
             self.magento_id = self._create(record)
-        self._after_export()
         return _('Record exported with ID %s on Magento.') % self.magento_id
 
 
