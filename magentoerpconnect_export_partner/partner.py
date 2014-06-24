@@ -48,19 +48,32 @@ class PartnerExport(MagentoExporter):
         data = {
             'magento_partner_id': self.binding_id,
         }
-        if not self.binding_record.magento_address_bind_ids:
+        if not self.binding_record.magento_address_bind_ids \
+        and not self.binding_record.consider_as_company:
             data['openerp_id'] = self.binding_record.openerp_id.id
-            data['is_default_billing'] = True
-            data['is_default_shipping'] = True
-            self.session.create('magento.address', data)
-        for child in self.binding_record.child_ids:
-            if not child.magento_address_bind_ids:
-                data['is_default_billing'] = False
-                data['is_default_shipping'] = False
-                data['openerp_id'] = child.id
+
+            if not self.binding_record.child_ids:
+                data['is_default_billing'] = True
+                data['is_default_shipping'] = True
+
+            with self._retry_unique_violation():
                 self.session.create('magento.address', data)
 
-    def _validate_data(self, data):
+        for child in self.binding_record.child_ids:
+            if not child.magento_address_bind_ids:
+                if child.type == 'invoice':
+                    data['is_default_billing'] = True
+                else:
+                    data['is_default_billing'] = False
+                if child.type == 'delivery':
+                    data['is_default_shipping'] = True
+                else:
+                    data['is_default_shipping'] = False
+                data['openerp_id'] = child.id
+                with self._retry_unique_violation():
+                    self.session.create('magento.address', data)
+
+    def _validate_create_data(self, data):
         """ Check if the values to import are correct
 
         Pro-actively check before the ``Model.create`` or
@@ -83,7 +96,7 @@ class AddressExport(MagentoExporter):
         self._export_dependency(relation, 'magento.res.partner',
                                 exporter_class=PartnerExport)
 
-    def _validate_data(self, data):
+    def _validate_create_data(self, data):
         """ Check if the values to import are correct
 
         Pro-actively check before the ``Model.create`` or
@@ -112,7 +125,7 @@ class PartnerExportMapper(ExportMapper):
             ('taxvat', 'taxvat'),
             ('group_id', 'group_id'),
             ('website_id', 'website_id'),
-            ('magento_password', 'password_hash'),
+            ('magento_password', 'password'),
         ]
 
     @changed_by('email', 'emailid')
@@ -142,6 +155,7 @@ class PartnerAddressExportMapper(ExportMapper):
               ('city', 'city'),
               ('is_default_billing', 'is_default_billing'),
               ('is_default_shipping', 'is_default_shipping'),
+              ('company', 'company'),
               ]
 
     @changed_by('parent_id', 'openerp_id')

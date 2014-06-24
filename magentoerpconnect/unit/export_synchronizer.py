@@ -315,7 +315,17 @@ class MagentoExporter(MagentoBaseExporter):
         """ Can do several actions after exporting a record on magento """
         pass
 
-    def _validate_data(self, data):
+    def _validate_create_data(self, data):
+        """ Check if the values to import are correct
+
+        Pro-actively check before the ``Model.create`` or
+        ``Model.update`` if some fields are missing
+
+        Raise `InvalidDataError`
+        """
+        return
+
+    def _validate_update_data(self, data):
         """ Check if the values to import are correct
 
         Pro-actively check before the ``Model.create`` or
@@ -332,7 +342,7 @@ class MagentoExporter(MagentoBaseExporter):
     def _create(self, data):
         """ Create the Magento record """
         # special check on data before export
-        self._validate_data(data)
+        self._validate_create_data(data)
         return self.backend_adapter.create(data)
 
     def _update_data(self, map_record, fields=None, **kwargs):
@@ -343,7 +353,7 @@ class MagentoExporter(MagentoBaseExporter):
         """ Update an Magento record """
         assert self.magento_id
         # special check on data before export
-        self._validate_data(data)
+        self._validate_update_data(data)
         self.backend_adapter.write(self.magento_id, data)
 
     def _run(self, fields=None):
