@@ -77,12 +77,11 @@ class PartnerExport(MagentoExporter):
 class AddressExport(MagentoExporter):
     _model_name = ['magento.address']
 
-
     def _export_dependencies(self):
         """ Export the dependencies for the record"""
         relation = self.binding_record.parent_id or self.binding_record.openerp_id
         self._export_dependency(relation, 'magento.res.partner',
-                                PartnerExport)
+                                exporter_class=PartnerExport)
 
     def _validate_data(self, data):
         """ Check if the values to import are correct
@@ -116,6 +115,7 @@ class PartnerExportMapper(ExportMapper):
             ('magento_password', 'password_hash'),
         ]
 
+    @changed_by('email', 'emailid')
     @mapping
     def email(self, record):
         email = record.emailid or record.email
@@ -143,15 +143,16 @@ class PartnerAddressExportMapper(ExportMapper):
               ('is_default_billing', 'is_default_billing'),
               ('is_default_shipping', 'is_default_shipping'),
               ]
- 
- 
+
+    @changed_by('parent_id', 'openerp_id')
     @mapping
     def partner(self, record):
         binder = self.get_binder_for_model('magento.res.partner')
-        erp_partner_id = record.parent_id and record.parent_id.id or record.openerp_id.id
-        mag_partner_id = binder.to_backend(erp_partner_id, True)
+        erp_partner_id = record.parent_id.id if record.parent_id else record.openerp_id.id
+        mag_partner_id = binder.to_backend(erp_partner_id, wrap=True)
         return {'partner_id': mag_partner_id}
  
+    @changed_by('name')
     @mapping
     def names(self, record):
         if ' ' in record.name:
@@ -163,20 +164,24 @@ class PartnerAddressExportMapper(ExportMapper):
             firstname = '-'
         return {'firstname': firstname, 'lastname': lastname}
  
+    @changed_by('phone', 'mobile')
     @mapping
     def phone(self, record):
         return {'telephone': record.phone or record.mobile}
 
+    @changed_by('country_id')
     @mapping
     def country(self, record):
         if record.country_id:
             return {'country_id': record.country_id.code}
  
+    @changed_by('state_id')
     @mapping
     def region(self, record):
         if record.state_id:
             return {'region': record.state_id.name}
  
+    @changed_by('street', 'street2')
     @mapping
     def street(self, record):
         if record.street:

@@ -632,7 +632,6 @@ class AddressImportMapper(BaseAddressImportMapper):
         ('company', 'company'),
     ]
 
-
     @mapping
     def names(self, record):
         # TODO create a glue module for base_surname
