@@ -54,7 +54,6 @@ class res_partner(orm.Model):
             string="Magento Address Bindings"),
         'birthday': fields.date('Birthday'),
         'company': fields.char('Company'),
-        'magento_password': fields.char('Magento Password'),
     }
 
     def copy_data(self, cr, uid, id, default=None, context=None):

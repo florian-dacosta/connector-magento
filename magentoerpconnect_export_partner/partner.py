@@ -125,7 +125,6 @@ class PartnerExportMapper(ExportMapper):
             ('taxvat', 'taxvat'),
             ('group_id', 'group_id'),
             ('website_id', 'website_id'),
-            ('magento_password', 'password'),
         ]
 
     @changed_by('email', 'emailid')
